@@ -11,6 +11,7 @@ import menuRoutes from "./routes/menu.routes.js";
 import feeStructureRoutes from './routes/feeStructure.js';
 import paymentStatusRoutes from './routes/paymentStatus.js';
 import roomApplicationRoutes from './routes/roomApplicationRoutes.js';
+import roomRoutes from './routes/roomRoutes.js';
 const app = express();
 
 app.use(cors({
@@ -35,6 +36,8 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/fee-structure", feeStructureRoutes);
 app.use('/api/payment-status', paymentStatusRoutes);
 app.use('/api/room-application', roomApplicationRoutes);
+app.use('/api/rooms', roomRoutes);
+
 app.use(errorHandler);
 
 export default app;
