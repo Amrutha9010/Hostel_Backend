@@ -23,5 +23,6 @@ const roomApplicationSchema = new mongoose.Schema({
   assignedRoom: { type: String }, // Filled by warden
 }, { timestamps: true });
 
+
 const RoomApplication = mongoose.model('RoomApplication', roomApplicationSchema);
 export default RoomApplication;

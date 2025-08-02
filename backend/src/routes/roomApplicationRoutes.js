@@ -2,8 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import { storage } from '../config/cloudinary.js';
 import RoomApplication from '../models/roomApplicationModel.js';
-import Student from '../models/Student.model.js'; // Import Student model
-
+import Student from '../models/Student.model.js';
+import Room from '../models/roomModel.js';
 const router = express.Router();
 const upload = multer({ storage });
 
@@ -75,6 +75,16 @@ router.put('/:id/approve', async (req, res) => {
   try {
     const { assignedRoom, joinDate } = req.body;
 
+    // First validate the room exists and has capacity
+    const room = await Room.findOne({ roomNo: assignedRoom });
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+    if (room.occupants.length >= room.capacity) {
+      return res.status(400).json({ success: false, message: 'Room is at full capacity' });
+    }
+
+    // Update application status
     const application = await RoomApplication.findByIdAndUpdate(
       req.params.id,
       {
@@ -89,17 +99,16 @@ router.put('/:id/approve', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    // Create Student entry if not exists
+    // Check if student already exists
     const existingStudent = await Student.findOne({ rollNumber: application.rollNumber });
-
     if (!existingStudent) {
       const newStudent = new Student({
         fullName: application.fullName,
         rollNumber: application.rollNumber,
-        roomNo: application.assignedRoom,
-        block: application.assignedRoom.split(' ')[0],
-        floor: application.assignedRoom.split(' ')[2],
-        bedNo: '1',
+        roomNo: assignedRoom,
+        block: room.block,  // Get from room document instead of splitting
+        floor: room.floor,  // Get from room document instead of splitting
+        bedNo: '1', // Default bed number
         acType: application.acType,
         joinDate: application.joinDate,
         branchYear: application.branchYear,
@@ -114,12 +123,24 @@ router.put('/:id/approve', async (req, res) => {
         collegeId: application.collegeId,
       });
 
-      await newStudent.save();
+      const savedStudent = await newStudent.save();
+      
+      // Update room occupants
+      room.occupants.push(savedStudent._id);
+      await room.save();
     }
 
-    res.status(200).json({ success: true, data: application });
+    res.status(200).json({ 
+      success: true, 
+      data: application,
+      message: 'Student approved and room assigned successfully'
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('Approval error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Failed to approve application'
+    });
   }
 });
 
